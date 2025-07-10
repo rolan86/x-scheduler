@@ -11,6 +11,7 @@ from rich.logging import RichHandler
 from src import __version__
 from src.core.database import initialize_database
 from src.core.config import settings
+from src.cli.auth_commands import auth
 
 # Configure logging
 logging.basicConfig(
@@ -33,6 +34,10 @@ def cli(ctx: click.Context) -> None:
     AI-generated content, flexible scheduling, and media creation.
     """
     ctx.ensure_object(dict)
+
+
+# Add auth commands
+cli.add_command(auth)
 
 
 @cli.command()
