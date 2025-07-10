@@ -1,10 +1,24 @@
 """Main CLI entry point for X-Scheduler."""
 
+import logging
+from pathlib import Path
+
 import click
 from rich.console import Console
 from rich.table import Table
+from rich.logging import RichHandler
 
 from src import __version__
+from src.core.database import initialize_database
+from src.core.config import settings
+
+# Configure logging
+logging.basicConfig(
+    level=settings.log_level,
+    format="%(message)s",
+    datefmt="[%X]",
+    handlers=[RichHandler(rich_tracebacks=True)]
+)
 
 console = Console()
 
@@ -128,14 +142,41 @@ def stats(period: str) -> None:
 def init() -> None:
     """Initialize the X-Scheduler database and configuration."""
     console.print("[bold green]Initializing X-Scheduler...[/bold green]")
-    console.print("✓ Creating database...")
-    console.print("✓ Setting up configuration...")
-    console.print("✓ Creating media directories...")
-    console.print("[bold green]Initialization complete![/bold green]")
-    console.print("\nNext steps:")
-    console.print("1. Copy .env.example to .env and add your API keys")
-    console.print("2. Run 'x-scheduler generate --topic \"your topic\"' to create content")
-    console.print("3. Run 'x-scheduler queue list' to view scheduled posts")
+    
+    try:
+        # Create data and media directories
+        console.print("✓ Creating directories...")
+        data_dir = Path(settings.data_dir)
+        media_dir = Path(settings.media_dir)
+        data_dir.mkdir(parents=True, exist_ok=True)
+        media_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Initialize database
+        console.print("✓ Creating database...")
+        initialize_database()
+        
+        # Check for .env file
+        env_path = Path(".env")
+        if not env_path.exists():
+            console.print("[yellow]⚠ No .env file found![/yellow]")
+            console.print("  Creating .env from template...")
+            
+            env_example = Path(".env.example")
+            if env_example.exists():
+                env_path.write_text(env_example.read_text())
+                console.print("  ✓ Created .env file")
+            else:
+                console.print("  [red]✗ .env.example not found![/red]")
+        
+        console.print("[bold green]Initialization complete![/bold green]")
+        console.print("\nNext steps:")
+        console.print("1. Edit .env and add your API keys")
+        console.print("2. Run 'x-scheduler generate --topic \"your topic\"' to create content")
+        console.print("3. Run 'x-scheduler queue list' to view scheduled posts")
+        
+    except Exception as e:
+        console.print(f"[bold red]Error during initialization:[/bold red] {str(e)}")
+        raise click.ClickException(str(e))
 
 
 if __name__ == "__main__":
