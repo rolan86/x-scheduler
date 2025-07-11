@@ -12,6 +12,7 @@ from src import __version__
 from src.core.database import initialize_database
 from src.core.config import settings
 from src.cli.auth_commands import auth
+from src.cli.media_commands import media
 from src.core.content_generator import content_generator
 from src.core.tweet_manager import tweet_manager
 from src.api.auth import auth_manager
@@ -31,78 +32,51 @@ console = Console()
 @click.version_option(version=__version__, prog_name="x-scheduler")
 @click.pass_context
 def cli(ctx: click.Context) -> None:
-    """X-Scheduler: AI-powered Twitter/X content scheduling and posting.
+    """X-Scheduler: Twitter/X content scheduling and posting tool.
     
-    Maintain consistent posting to grow your Twitter/X following with
-    AI-generated content, flexible scheduling, and media creation.
+    Designed to work with Claude Code for content creation.
+    Handles scheduling, posting, and media generation (DALL-E images, Pollo.ai videos).
+    
+    Quick start:
+    1. Use Claude Code to generate tweet content
+    2. Save with: x-scheduler create --content "your tweet"
+    3. Add media: x-scheduler media generate-image --prompt "..." --tweet-id ID
+    4. Post: x-scheduler queue post --id ID
     """
     ctx.ensure_object(dict)
 
 
 # Add auth commands
 cli.add_command(auth)
+cli.add_command(media)
 
 
 @cli.command()
-@click.option("--topic", required=True, help="Topic for content generation")
-@click.option(
-    "--style",
-    type=click.Choice(["personal", "professional", "casual", "educational"]),
-    default="personal",
-    help="Writing style for the content"
-)
-@click.option("--count", default=1, help="Number of tweets to generate")
-@click.option("--model", default="gpt-4", help="AI model to use")
-@click.option("--template", help="Style template to use")
-@click.option("--save/--no-save", default=True, help="Save to database")
-def generate(topic: str, style: str, count: int, model: str, template: str, save: bool) -> None:
-    """Generate tweet content using AI."""
-    # Check if OpenAI is configured
-    if not auth_manager.is_provider_configured('openai'):
-        console.print("[red]OpenAI not configured. Run 'x-scheduler auth setup openai' first.[/red]")
-        return
-    
-    console.print(f"[bold green]Generating {count} tweet(s) about '{topic}'...[/bold green]")
-    
+@click.option("--content", required=True, help="Tweet content to save")
+@click.option("--type", "content_type", type=click.Choice(["personal", "professional", "casual", "educational"]), default="personal")
+def create(content: str, content_type: str) -> None:
+    """Create a tweet and save to database (for use with Claude Code)."""
     try:
-        # Generate using template or style
-        if template:
-            console.print(f"Using template: [cyan]{template}[/cyan]")
-            results = content_generator.generate_with_template(topic, template, count, save)
-        else:
-            console.print(f"Style: [cyan]{style}[/cyan], Model: [cyan]{model}[/cyan]")
-            results = content_generator.generate_tweets(topic, style, count, model, save)
+        from src.models import ContentType
         
-        if not results:
-            console.print("[red]Failed to generate tweets. Check your OpenAI configuration.[/red]")
-            return
+        # Create tweet
+        tweet = tweet_manager.create_tweet(
+            content=content,
+            content_type=ContentType(content_type)
+        )
         
-        # Display results
-        console.print(f"\n[bold green]Generated {len(results)} tweet(s):[/bold green]")
+        console.print(f"[green]✓ Created tweet {tweet.id}[/green]")
+        console.print(f"Content: [white]{content}[/white]")
+        console.print(f"Characters: {len(content)}/280")
+        console.print(f"Type: {content_type}")
+        console.print(f"\n[dim]Tweet ID: {tweet.id} - Use this ID for scheduling or posting[/dim]")
         
-        for i, result in enumerate(results, 1):
-            console.print(f"\n[bold cyan]Tweet {i}:[/bold cyan]")
-            console.print(f"[white]{result['content']}[/white]")
-            console.print(f"[dim]Characters: {result['character_count']}/280[/dim]")
-            
-            if result['has_hashtags']:
-                console.print(f"[dim]Hashtags: {result['hashtag_count']}[/dim]")
-            
-            console.print(f"[dim]Cost: ${result['cost']:.4f} | Tokens: {result['tokens_used']}[/dim]")
-            
-            if save and result['id']:
-                console.print(f"[dim]Saved as tweet ID: {result['id']}[/dim]")
+        # Return just the ID for easy parsing by Claude Code
+        print(f"\nTWEET_ID={tweet.id}")
         
-        # Show total cost
-        total_cost = sum(r['cost'] for r in results)
-        console.print(f"\n[bold]Total cost: ${total_cost:.4f}[/bold]")
-        
-        if save:
-            console.print("\n[green]Tweets saved to database. Use 'x-scheduler queue list' to view.[/green]")
-    
     except Exception as e:
-        console.print(f"[red]Error generating tweets: {str(e)}[/red]")
-        logging.error(f"Error in generate command: {e}")
+        console.print(f"[red]Error creating tweet: {str(e)}[/red]")
+        logging.error(f"Error in create command: {e}")
 
 
 @cli.command()
