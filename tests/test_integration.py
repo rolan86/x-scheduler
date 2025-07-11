@@ -6,7 +6,7 @@ from pathlib import Path
 from datetime import datetime, timedelta
 
 # Add src to path for imports
-sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.core.tweet_manager import tweet_manager
 from src.core.content_generator import content_generator

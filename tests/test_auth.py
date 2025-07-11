@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 
 # Add src to path for imports
-sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.api.auth import auth_manager, TwitterCredentials, OpenAICredentials, PolloCredentials
 from src.api.twitter import twitter_api

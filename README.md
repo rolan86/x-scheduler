@@ -331,7 +331,7 @@ X-Scheduler is designed to work seamlessly with Claude Code. Here's the typical 
 3. **Claude Code can suggest and generate media** using the media commands
 4. **Claude Code schedules or posts** the tweet using the queue commands
 
-See [CLAUDE_CODE_WORKFLOW.md](CLAUDE_CODE_WORKFLOW.md) for detailed integration examples.
+See [CLAUDE_CODE_WORKFLOW.md](docs/CLAUDE_CODE_WORKFLOW.md) for detailed integration examples.
 
 ## Development
 
@@ -342,7 +342,7 @@ See [CLAUDE_CODE_WORKFLOW.md](CLAUDE_CODE_WORKFLOW.md) for detailed integration 
 pip install -e ".[dev]"
 
 # Run tests
-python3 test_integration.py
+python3 tests/test_integration.py
 
 # Run linting
 ruff check .
@@ -377,7 +377,13 @@ x-scheduler/
 ├── data/                 # Local storage
 │   ├── scheduler.db      # SQLite database
 │   └── media/            # Generated media files
-├── CLAUDE_CODE_WORKFLOW.md # Claude Code integration guide
+├── docs/                 # Documentation
+│   ├── CLAUDE_CODE_WORKFLOW.md # Claude Code integration guide
+│   ├── SETUP_GUIDE.md    # Detailed setup instructions
+│   └── PRD.md            # Product Requirements Document
+├── tests/                # Test files
+│   ├── test_integration.py # Integration tests
+│   └── test_*.py         # Other test files
 ├── .env.example          # Environment variables template
 └── README.md             # This file
 ```
@@ -417,4 +423,4 @@ x-scheduler queue delete --id 123 --force        # Delete any tweet
 x-scheduler auth status                           # Check API connections
 ```
 
-For more examples and advanced usage, see [CLAUDE_CODE_WORKFLOW.md](CLAUDE_CODE_WORKFLOW.md).
+For more examples and advanced usage, see [CLAUDE_CODE_WORKFLOW.md](docs/CLAUDE_CODE_WORKFLOW.md).
