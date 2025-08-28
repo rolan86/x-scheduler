@@ -79,6 +79,7 @@ class Tweet(Base, TimestampMixin):
     
     # Relationships
     media_items = relationship("Media", back_populates="tweet", cascade="all, delete-orphan")
+    hook_usage = relationship("HookUsage", back_populates="tweet", uselist=False)
     
     def __repr__(self) -> str:
         return f"<Tweet(id={self.id}, status={self.status}, content='{self.content[:50]}...')>"

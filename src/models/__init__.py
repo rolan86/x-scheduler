@@ -6,6 +6,7 @@ from src.models.media import Media, MediaType, MediaSource
 from src.models.api_usage import APIUsage, APIBudget, APIProvider, APIEndpoint
 from src.models.analytics import DailyStats, PostingPattern, UserMetrics, MetricType
 from src.models.settings import UserSettings, StyleTemplate, SettingCategory
+from src.models.hooks import HookTemplate, HookUsage, HookCategory, HookPatternType
 
 __all__ = [
     # Base
@@ -40,4 +41,10 @@ __all__ = [
     "UserSettings",
     "StyleTemplate",
     "SettingCategory",
+    
+    # Hooks
+    "HookTemplate",
+    "HookUsage",
+    "HookCategory",
+    "HookPatternType",
 ]

@@ -13,6 +13,7 @@ from src.core.database import initialize_database
 from src.core.config import settings
 from src.cli.auth_commands import auth
 from src.cli.media_commands import media
+from src.cli.hook_commands import hooks
 from src.core.content_generator import content_generator
 from src.core.tweet_manager import tweet_manager
 from src.api.auth import auth_manager
@@ -46,29 +47,79 @@ def cli(ctx: click.Context) -> None:
     ctx.ensure_object(dict)
 
 
-# Add auth commands
+# Add subcommands
 cli.add_command(auth)
 cli.add_command(media)
+cli.add_command(hooks)
 
 
 @cli.command()
 @click.option("--content", required=True, help="Tweet content to save")
 @click.option("--type", "content_type", type=click.Choice(["personal", "professional", "casual", "educational"]), default="personal")
-def create(content: str, content_type: str) -> None:
-    """Create a tweet and save to database (for use with Claude Code)."""
+@click.option("--use-hook", type=int, help="Hook ID to apply to content")
+@click.option("--hook-type", help="Type of hook pattern to apply (shock, value_giveaway, etc.)")
+@click.option("--auto-hook", is_flag=True, help="Automatically select best hook")
+def create(content: str, content_type: str, use_hook: int = None, hook_type: str = None, auto_hook: bool = False) -> None:
+    """Create a tweet and save to database (for use with Claude Code).
+    
+    Optionally apply high-performing hooks to enhance engagement."""
     try:
         from src.models import ContentType
+        from src.core.hook_manager import get_hook_manager
         
-        # Create tweet
+        # Handle hook application if requested
+        final_content = content
+        hook_used = None
+        
+        if use_hook or hook_type or auto_hook:
+            hook_manager = get_hook_manager()
+            
+            if use_hook:
+                # Use specific hook ID
+                console.print(f"[cyan]Applying hook #{use_hook}...[/cyan]")
+                final_content = hook_manager.adapt_hook(use_hook, content)
+                hook_used = use_hook
+            elif hook_type:
+                # Find and apply hook by type
+                hooks = hook_manager.suggest_hooks(pattern_type=hook_type, count=1)
+                if hooks:
+                    console.print(f"[cyan]Applying {hook_type} hook...[/cyan]")
+                    final_content = hook_manager.adapt_hook(hooks[0].id, content)
+                    hook_used = hooks[0].id
+                else:
+                    console.print(f"[yellow]No {hook_type} hooks found, using original content[/yellow]")
+            elif auto_hook:
+                # Auto-select best hook
+                hooks = hook_manager.suggest_hooks(topic=content[:50], count=1)
+                if hooks:
+                    console.print(f"[cyan]Auto-applying {hooks[0].pattern_type} hook...[/cyan]")
+                    final_content = hook_manager.adapt_hook(hooks[0].id, content)
+                    hook_used = hooks[0].id
+                else:
+                    console.print("[yellow]No suitable hooks found, using original content[/yellow]")
+        
+        # Create tweet with potentially hooked content
         tweet = tweet_manager.create_tweet(
-            content=content,
+            content=final_content,
             content_type=ContentType(content_type)
         )
         
+        # Track hook usage if a hook was applied
+        if hook_used:
+            hook_manager.track_usage(
+                hook_id=hook_used,
+                tweet_id=tweet.id,
+                adapted_content=final_content,
+                notes=f"Applied via CLI create command"
+            )
+            console.print(f"[green]✓ Hook #{hook_used} applied successfully[/green]")
+        
         console.print(f"[green]✓ Created tweet {tweet.id}[/green]")
-        console.print(f"Content: [white]{content}[/white]")
-        console.print(f"Characters: {len(content)}/280")
+        console.print(f"Content: [white]{final_content}[/white]")
+        console.print(f"Characters: {len(final_content)}/280")
         console.print(f"Type: {content_type}")
+        if hook_used:
+            console.print(f"Hook: #{hook_used}")
         console.print(f"\n[dim]Tweet ID: {tweet.id} - Use this ID for scheduling or posting[/dim]")
         
         # Return just the ID for easy parsing by Claude Code
